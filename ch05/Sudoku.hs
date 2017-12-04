@@ -34,7 +34,7 @@ valid g =  all nodups (rows g)
 
 nodups :: (Eq a) => [a] -> Bool
 nodups [] = True
-nodups (x : xs) = all (/= x) xs && nodups xs
+nodups (x : xs) = notElem x xs && nodups xs
 
 rows :: Matrix a -> Matrix a
 rows = id
