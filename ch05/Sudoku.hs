@@ -25,7 +25,7 @@ blank :: Digit -> Bool
 blank = (== '0')
 
 solve :: Grid -> [Grid]
-solve = filter valid . expand . many prune . choices
+solve = search . choices
 
 valid :: Grid -> Bool
 valid g =  all nodups (rows g)
@@ -61,13 +61,43 @@ choices = map (map choice)
 choice :: Digit -> [Digit]
 choice d = if blank d then digits else [d]
 
-expand :: Matrix Choices -> [Grid]
-expand = cp . map cp
+extract :: Matrix Choices -> Grid
+extract = map (map head)
 
-cp :: [[a]] -> [[a]]
-cp [] = [[]]
-cp (xs : xss) = [ x : ys | x <- xs , ys <- yss]
-                  where yss = cp xss
+-- expand === concat . map expand . expand1
+expand1 :: Matrix Choices -> [Matrix Choices]
+expand1
+  rows = [rows1 ++ [row1 ++ [c] : row2] ++ rows2 | c <- cs]
+    where
+      (rows1, row : rows2) = break (any smallest) rows
+      (row1, cs : row2)    = break smallest row
+      smallest cs = length cs == n
+      n           = minimum (counts rows)
+
+counts :: Matrix Choices -> [Int]
+counts = filter (/= 1) . map length . concat
+
+complete :: Matrix Choices ->Bool
+complete = all (all single)
+
+safe :: Matrix Choices -> Bool
+safe cm = all ok (rows cm)
+       && all ok (cols cm)
+       && all ok (boxs cm)
+
+search :: Matrix Choices -> [Grid]
+search cm
+  | not (safe pm) = []
+  | complete pm = [extract pm]
+  | otherwise = concatMap search (expand1 pm)
+  where pm = prune cm
+
+ok :: [[Digit]] -> Bool
+ok row = nodups [x | [x] <- row]
+
+single :: [a] -> Bool
+single [_] = True
+single _   = False
 
 pruneRow :: Row Choices -> Row Choices
 pruneRow row = map (remove fixed) row
